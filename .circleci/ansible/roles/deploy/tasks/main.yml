@@ -6,13 +6,14 @@
 
 - name: "Unarchive backend files"
   unarchive:
-    src: artifact.tar.gz
+    src: ~/artifact.tar.gz
     dest: ~/backend
 
-- name: "Install NodeJS Dependencies"
+- name: "Installing Node Dependencies"
   shell: |
     cd ~/backend
-    npm install
+    tar -xvzf artifact.tar.gz
+    npm install -f
     
 - name: "Configure pm2 to start as service"
   shell: |
