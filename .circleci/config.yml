@@ -1,6 +1,30 @@
 version: 2.1
 
 commands:
+  install_ansible:
+    description: Install Ansible
+    steps:
+      - run:
+          name: Install Ansible
+          command: |
+            sudo apt update
+            sudo apt install software-properties-common -y
+            sudo add-apt-repository --yes --update ppa:ansible/ansible
+            sudo apt install ansible -y
+
+  install_nodejs:
+    description: Install Node.js 13
+    steps:
+      - run:
+          name: Install Node.js 13
+          command: |
+            # Install Node.js LTS version as our base Node.js version
+            curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+            sudo apt install -y nodejs
+            # Use n version manager to use Node.js v13.8.0
+            sudo npm install --global n
+            sudo n 13.8.0
+
   install_awscli:
     description: Install AWS CLI v2
     steps:
@@ -244,37 +268,46 @@ jobs:
 
   deploy-backend:
     docker:
-      - image: python:3.8-alpine3.15
+      - image: cimg/base:stable
     steps:
       - checkout
       - install_awscli
+      - install_ansible
+      - install_nodejs
       - add_ssh_keys: 
-          fingerprints: ["c4:84:ca:74:57:67:65:10:97:29:9c:55:dc:e1:a1:b6"]
+          fingerprints: ["7f:26:e8:62:0f:d1:37:d2:88:ce:28:06:91:d5:68:29"]
       - attach_workspace:
           at: ~/
+      - restore_cache:
+          keys: [backend-build]
       - run:
           name: Install dependencies
           command: |
-            apk add --update ansible
-            apk add --update tar gzip nodejs
+            cd backend
+            npm install
+            npm build
+            cd ..
+      - run:
+          name: Package Backend
+          command: |
+            tar -C backend -czvf artifact.tar.gz .
+            cp artifact.tar.gz  ~/
+      - run:
+          name: Checking the existence of inventory.txt && artifact.tar.gz file
+          command: |
+            cd .circleci/ansible
+            echo "Contents  of the inventory.txt file is -------"
+            cat inventory.txt
+            echo "Contents of files folder is -------"
+            ls ~/
       - run:
           name: Deploy backend
           command: |
-            cd backend
-            npm install
-            npm run build
-            tar -czf artifact.tar.gz dist/* package*
-            cd ..
-            cp backend/artifact.tar.gz .circleci/ansible/roles/deploy/files
-            export TYPEORM_MIGRATIONS_DIR=./migrations
-            export TYPEORM_ENTITIES=./modules/domain/**/*.entity{.ts,.js}
-            export TYPEORM_MIGRATIONS=./migrations/*.ts
-            
             cd .circleci/ansible
             cat inventory.txt
-            ansible-playbook -i inventory.txt deploy-backend.yml 
+            ansible-playbook -i inventory.txt deploy-backend.yml
       - destroy-environment
-      - revert-migrations      
+      - revert-migrations 
 
 workflows:
   default:
