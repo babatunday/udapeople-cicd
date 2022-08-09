@@ -1,0 +1,20 @@
+---
+- name: "Creates backend directory"
+  file:
+    path: ~/backend
+    state: directory
+
+- name: "Unarchive backend files"
+  unarchive:
+    src: artifact.tar.gz
+    dest: ~/backend
+
+- name: "Install NodeJS Dependencies"
+  shell: |
+    cd ~/backend
+    npm install
+    
+- name: "Configure pm2 to start as service"
+  shell: |
+    cd ~/backend
+    pm2 start npm --name backend -- start
