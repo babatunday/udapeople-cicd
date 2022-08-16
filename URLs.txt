@@ -1,0 +1,2 @@
+URL01: https://github.com/babatunday/udapeople-cicd
+URL02: http://udapeople-8f63c04.s3-website-us-east-1.amazonaws.com
